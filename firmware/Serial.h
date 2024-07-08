@@ -15,11 +15,11 @@ extern struct HexMeta returned;
 extern __xdata uint8_t SerialBuffer[0x100];
 extern __xdata uint8_t OutputBuffer[0x100];
 
-void SerialInit(void){ //9600bps
+void SerialInit(void){ //24Mhz@4800bps
     SCON = 0x50;
 	TMOD &= 0x0F;
-	TL1 = 0x8F;
-	TH1 = 0xFD;
+	TL1 = 0x1E;
+	TH1 = 0xFB;
 	ET1 = 0;
 	TR1 = 1;
 }
