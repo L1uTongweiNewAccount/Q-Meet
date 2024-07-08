@@ -1,9 +1,7 @@
-#include "reg8051.h"
 #define uECC_CURVE uECC_secp256k1
 #define uECC_ASM uECC_asm_none
 #define uECC_PLATFORM uECC_arch_other
 #define uECC_WORD_SIZE 1
-#include "Serial.h"
 #include "micro-ecc/uECC.h"
 #include "micro-ecc/uECC.c"
 #define BACK_TO_TABLES
@@ -13,7 +11,6 @@
 #include "sha-2/sha-256.c"
 #include "mt19937ar/mt19937ar.c"
 #include <stdlib.h>
-#define SLOT(x) (FRAM + 0x20 * x)
 
 struct HexMeta failed = {0, 0, 0, 0};
 struct HexMeta returned = {0, 0, 0, 0};
@@ -25,7 +22,10 @@ __xdata struct Sha_256 SHA256Context;
 __xdata unsigned long mt[N];
 long timerCount = 0;
 int16_t openedSlot = -1;
- 
+
+#include "reg8051.h"
+#include "Serial.h"
+#define SLOT(x) (FRAM + 0x20 * x)
 void TimerInit(void){
 	TMOD &= 0xF0;
 	TL0 = 0xE8;
@@ -34,7 +34,6 @@ void TimerInit(void){
 	TR0 = 1;
 }
 void TimerInterrupt(void) __interrupt(1) {timerCount++;}
-
 int RNG(uint8_t *dest, unsigned size){
     init_genrand(timerCount);
     while(size > 4){
