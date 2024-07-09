@@ -65,6 +65,9 @@ void SerialSend(uint8_t byte_count, uint16_t method, uint8_t slot){
         writeByte(OutputBuffer[i]), sum += OutputBuffer[i];
     }
     writeByte(0x100 - sum);
+    SBUF = '\n';
+    while(TI);
+    TI = 0;
 }
 
 void SerialRecv(void){

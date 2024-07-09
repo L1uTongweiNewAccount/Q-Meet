@@ -1,3 +1,8 @@
+#ifdef EMULATOR
+    #define __xdata
+    #define __reentrant
+#endif
+
 #define uECC_CURVE uECC_secp256k1
 #define uECC_ASM uECC_asm_none
 #define uECC_PLATFORM uECC_arch_other
@@ -11,9 +16,8 @@
 #include "sha-2/sha-256.c"
 #include "mt19937ar/mt19937ar.c"
 #include <stdlib.h>
+#define SLOT(x) (FRAM + 0x20 * x)
 
-struct HexMeta failed = {0, 0, 0, 0};
-struct HexMeta returned = {0, 0, 0, 0};
 __xdata uint8_t FRAM[0x2000]; //Please place this first so that its addr = 0x0000
 __xdata uint8_t SerialBuffer[0x100], OutputBuffer[0x100], PublicKeyBuffer[0x40], PrivateKeyBuffer[0x20];
 __xdata uint8_t SharedKeyBuffer[0x20], OtherPublicKeyBuffer[0x40], HashBuffer[0x32];
@@ -23,9 +27,9 @@ __xdata unsigned long mt[N];
 long timerCount = 0;
 int16_t openedSlot = -1;
 
+#ifndef EMULATOR
 #include "reg8051.h"
 #include "Serial.h"
-#define SLOT(x) (FRAM + 0x20 * x)
 void TimerInit(void){
 	TMOD &= 0xF0;
 	TL0 = 0xE8;
@@ -43,9 +47,45 @@ int RNG(uint8_t *dest, unsigned size){
     while(size--) *(dest++) = (uint8_t)genrand_int32();
     return 1;
 }
+#else
+#include "SerialEmulator.h"
+#include <time.h>
+#include <signal.h>
+#include <stdio.h>
+void TimerInit(void){}
+void TimerInterrupt(void){}
+int RNG(uint8_t *dest, unsigned size){
+    init_genrand(time(NULL) + clock());
+    while(size > 4){
+        *(uint32_t*)dest = genrand_int32();
+        dest += 4, size -= 4;
+    }
+    while(size--) *(dest++) = (uint8_t)genrand_int32();
+    return 1;
+}
+void saveFRAM(){
+    FILE* file = fopen("FRAM.bin", "w");
+    fwrite(FRAM, 0x100, 0x20, file);
+    fclose(file);
+}
+#endif
 
+struct HexMeta failed = {0, 0, 0, 0};
+struct HexMeta returned = {0, 0, 0, 0};
+
+#ifndef EMULATOR
 int main(void){
     SerialInit();
+#else
+int main(int argc, char** argv){
+    if(argc < 2) return 1;
+    SerialInit(argv[1]);
+    if(!access("FRAM.bin", F_OK)){
+        FILE* file = fopen("FRAM.bin", "w");
+        fread(FRAM, 0x100, 0x20, file);
+        fclose(file);
+    }
+#endif
     TimerInit();
     uECC_set_rng(RNG);
     while(1){
