@@ -2,25 +2,24 @@
     #define __xdata
     #define __reentrant
 #endif
-
 #define uECC_CURVE uECC_secp256k1
 #define uECC_ASM uECC_asm_none
 #define uECC_PLATFORM uECC_arch_other
 #define uECC_WORD_SIZE 1
-#include "micro-ecc/uECC.h"
-#include "micro-ecc/uECC.c"
+#include "../libs/micro-ecc/uECC.h"
+#include "../libs/micro-ecc/uECC.c"
 #define BACK_TO_TABLES
-#include "aes256/aes256.h"
-#include "aes256/aes256.c"
-#include "sha-2/sha-256.h"
-#include "sha-2/sha-256.c"
-#include "mt19937ar/mt19937ar.c"
+#include "../libs/aes256/aes256.h"
+#include "../libs/aes256/aes256.c"
+#include "../libs/sha-2/sha-256.h"
+#include "../libs/sha-2/sha-256.c"
+#include "../libs/mt19937ar/mt19937ar.c"
 #include <stdlib.h>
 #define SLOT(x) (FRAM + 0x20 * x)
 
 __xdata uint8_t FRAM[0x2000]; //Please place this first so that its addr = 0x0000
 __xdata uint8_t SerialBuffer[0x100], OutputBuffer[0x100], PublicKeyBuffer[0x40], PrivateKeyBuffer[0x20];
-__xdata uint8_t SharedKeyBuffer[0x20], OtherPublicKeyBuffer[0x40], HashBuffer[0x32];
+__xdata uint8_t SharedKeyBuffer[0x20], OtherPublicKeyBuffer[0x40], HashBuffer[0x20];
 __xdata aes256_context AES256Context;
 __xdata struct Sha_256 SHA256Context;
 __xdata unsigned long mt[N];
@@ -29,7 +28,7 @@ int16_t openedSlot = -1;
 
 #ifndef EMULATOR
 #include "reg8051.h"
-#include "Serial.h"
+#include "../libs/Serial.h"
 void TimerInit(void){
 	TMOD &= 0xF0;
 	TL0 = 0xE8;
@@ -48,7 +47,7 @@ int RNG(uint8_t *dest, unsigned size){
     return 1;
 }
 #else
-#include "SerialEmulator.h"
+#include "../libs/SerialEmulator.h"
 #include <time.h>
 #include <signal.h>
 #include <stdio.h>
@@ -92,6 +91,16 @@ int main(int argc, char** argv){
         SerialRecv();
         if(returned.method){
             switch(returned.method){
+                case 0x6666:{
+                    OutputBuffer[0] = 'Q';
+                    OutputBuffer[1] = '-';
+                    OutputBuffer[2] = 'M';
+                    OutputBuffer[3] = 'e';
+                    OutputBuffer[4] = 'e';
+                    OutputBuffer[5] = 't';
+                    SerialSend(6, 0, 0);
+                    break;
+                }
                 case 0x8708:{ // Create a slot
                     static uint8_t* __xdata slot;
                     slot = SLOT(returned.slot);
@@ -115,7 +124,7 @@ int main(int argc, char** argv){
                     slot = SLOT(returned.slot);
                     memset(PrivateKeyBuffer, 0, 0x20);
                     memset(PublicKeyBuffer, 0, 0x40);
-                    memset(HashBuffer, 0, 0x32);
+                    memset(HashBuffer, 0, 0x20);
                     calc_sha_256(HashBuffer, SerialBuffer, returned.byte_count);
                     aes256_init(&AES256Context, HashBuffer);
                     memcpy(PrivateKeyBuffer, slot, 0x20);
@@ -167,7 +176,27 @@ int main(int argc, char** argv){
                         SerialSend(returned.byte_count, returned.method, returned.slot);
                         break;
                     }
+                    uECC_compute_public_key(PrivateKeyBuffer, PublicKeyBuffer);
                     memcpy(OutputBuffer, PublicKeyBuffer, 0x40);
+                    returned.byte_count = 0x40;
+                    SerialSend(returned.byte_count, returned.method, returned.slot);
+                    break;
+                }
+                case 0x7898:{ //Set Other's Public Key
+                    memcpy(OtherPublicKeyBuffer, SerialBuffer, 0x40);
+                    returned.byte_count = 1;
+                    OutputBuffer[0] = 0;
+                    SerialSend(returned.byte_count, returned.method, returned.slot);
+                    break;
+                }
+                case 0x6258:{ //Signature
+                    if(openedSlot == -1){
+                        returned.byte_count = 1;
+                        OutputBuffer[0] = 1;
+                        SerialSend(returned.byte_count, returned.method, returned.slot);
+                        break;
+                    }
+                    uECC_sign(PrivateKeyBuffer, SerialBuffer, OutputBuffer);
                     returned.byte_count = 0x40;
                     SerialSend(returned.byte_count, returned.method, returned.slot);
                     break;

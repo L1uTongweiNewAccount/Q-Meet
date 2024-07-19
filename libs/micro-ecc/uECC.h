@@ -81,7 +81,7 @@ If you are building on another POSIX-compliant system that supports /dev/random 
 you can define uECC_POSIX to use the predefined RNG. For embedded platforms there is no predefined
 RNG function; you must provide your own.
 */
-typedef int (*uECC_RNG_Function)(uint8_t *dest, unsigned size) __reentrant;
+typedef int (*uECC_RNG_Function)(uint8_t *dest, unsigned size);
 
 /* uECC_set_rng() function.
 Set the function that will be used to generate random bytes. The RNG function should

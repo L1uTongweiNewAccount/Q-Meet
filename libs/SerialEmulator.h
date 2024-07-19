@@ -62,7 +62,6 @@ void writeByte(uint8_t dat){
     char character = 0, writed = 0;
     if((dat >> 4) > 10) character = (dat >> 4) - 10 + 'A';
     else character = (dat >> 4) + '0';
-    putchar(character);
     #ifdef _WIN32
         WriteFile(Serial, &character, 1, &writed, NULL);
     #else
@@ -70,7 +69,6 @@ void writeByte(uint8_t dat){
     #endif
     if((dat & 0xF) > 10) character = (dat & 0xF) - 10 + 'A';
     else character = (dat & 0xF) + '0';
-    putchar(character);
     #ifdef _WIN32
         WriteFile(Serial, &character, 1, &writed, NULL);
     #else
@@ -85,8 +83,6 @@ int16_t readByte(void){
     #else
         read(Serial, dat, 2);
     #endif
-    putchar(dat[0]);
-    putchar(dat[1]);
     if(dat[0] >= '0' && dat[0] <= '9') result += 16 * (dat[0] - '0');
     else if(dat[0] >= 'A' && dat[0] <= 'F') result += 16 * (dat[0] - 'A' + 10);
     else if(dat[0] >= 'a' && dat[0] <= 'f') result += 16 * (dat[0] - 'a' + 10);
@@ -100,7 +96,6 @@ int16_t readByte(void){
 
 void SerialSend(uint8_t byte_count, uint16_t method, uint8_t slot){
     uint8_t sum = 0, character = ':', writed = 0;
-    printf("Hex to send :");
     #ifdef _WIN32
         WriteFile(Serial, &character, 1, &writed, NULL);
     #else
@@ -114,7 +109,7 @@ void SerialSend(uint8_t byte_count, uint16_t method, uint8_t slot){
         writeByte(OutputBuffer[i]), sum += OutputBuffer[i];
     }
     writeByte(0x100 - sum);
-    putchar('\n'), character = '\n';
+    character = '\n';
     #ifdef _WIN32
         WriteFile(Serial, &character, 1, &writed, NULL);
     #else
@@ -126,7 +121,6 @@ void SerialRecv(void){
     uint8_t dat = 0, sum = 0, readed = 0;
     int16_t status = 0;
     struct HexMeta meta;
-    printf("Hex to recieved :");
     memset(SerialBuffer, 0, sizeof(SerialBuffer));
     while(dat != ':'){
         #ifdef _WIN32
@@ -155,7 +149,6 @@ void SerialRecv(void){
     meta.checksum = (uint8_t)status;
     if(meta.checksum + sum != 0) {returned = failed; return;}
     returned = meta;
-    putchar('\n');
 }
 
 #endif

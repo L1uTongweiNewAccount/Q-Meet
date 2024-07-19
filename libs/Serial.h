@@ -1,6 +1,6 @@
 #ifndef SERIAL_H
 #define SERIAL_H
-#include "reg8051.h"
+#include "../firmware/reg8051.h"
 #include <stdint.h>
 #include <string.h>
 

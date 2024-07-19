@@ -2,7 +2,11 @@
 
 #define TOTAL_LEN_LEN 8
 
+#ifndef EMULATOR
 extern __xdata struct Sha_256 SHA256Context;
+#else
+extern struct Sha_256 SHA256Context;
+#endif
 
 /*
  * Comments from pseudo-code at https://en.wikipedia.org/wiki/SHA-2 are reproduced here.
