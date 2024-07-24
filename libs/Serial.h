@@ -25,11 +25,11 @@ void SerialInit(void){ //24Mhz@4800bps
 }
 
 void writeByte(uint8_t dat){
-    if((dat >> 4) > 10) SBUF = (dat >> 4) - 10 + 'A';
+    if((dat >> 4) >= 10) SBUF = (dat >> 4) - 10 + 'A';
     else SBUF = (dat >> 4) + '0';
     while(TI);
     TI = 0;
-    if((dat & 0xF) > 10) SBUF = (dat & 0xF) - 10 + 'A';
+    if((dat & 0xF) >= 10) SBUF = (dat & 0xF) - 10 + 'A';
     else SBUF = (dat & 0xF) + '0';
     while(TI);
     TI = 0;
@@ -97,7 +97,7 @@ void SerialRecv(void){
     }
     if((status = readByte()) == -1) {returned = failed; return;}
     meta.checksum = (uint8_t)status;
-    if(meta.checksum + sum != 0) {returned = failed; return;}
+    if((uint8_t)(meta.checksum + sum) != 0) {returned = failed; return;}
     returned = meta;
 }
 

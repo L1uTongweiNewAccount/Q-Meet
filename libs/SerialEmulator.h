@@ -59,15 +59,16 @@ void SerialInit(const char* path){ //4800bps
 }
 
 void writeByte(uint8_t dat){
-    char character = 0, writed = 0;
-    if((dat >> 4) > 10) character = (dat >> 4) - 10 + 'A';
+    char character = 0;
+    unsigned long writed = 0;
+    if((dat >> 4) >= 10) character = (dat >> 4) - 10 + 'A';
     else character = (dat >> 4) + '0';
     #ifdef _WIN32
         WriteFile(Serial, &character, 1, &writed, NULL);
     #else
         write(Serial, &character, 1);
     #endif
-    if((dat & 0xF) > 10) character = (dat & 0xF) - 10 + 'A';
+    if((dat & 0xF) >= 10) character = (dat & 0xF) - 10 + 'A';
     else character = (dat & 0xF) + '0';
     #ifdef _WIN32
         WriteFile(Serial, &character, 1, &writed, NULL);
@@ -77,7 +78,8 @@ void writeByte(uint8_t dat){
 }
 
 int16_t readByte(void){
-    uint8_t dat[2], result = 0, readed = 0;
+    uint8_t dat[2], result = 0;
+    unsigned long readed = 0;
     #ifdef _WIN32
         ReadFile(Serial, dat, 2, &readed, NULL);
     #else
@@ -95,7 +97,8 @@ int16_t readByte(void){
 }
 
 void SerialSend(uint8_t byte_count, uint16_t method, uint8_t slot){
-    uint8_t sum = 0, character = ':', writed = 0;
+    uint8_t sum = 0, character = ':';
+    unsigned long writed = 0;
     #ifdef _WIN32
         WriteFile(Serial, &character, 1, &writed, NULL);
     #else
@@ -118,7 +121,8 @@ void SerialSend(uint8_t byte_count, uint16_t method, uint8_t slot){
 }
 
 void SerialRecv(void){
-    uint8_t dat = 0, sum = 0, readed = 0;
+    uint8_t dat = 0, sum = 0;
+    unsigned long readed = 0;
     int16_t status = 0;
     struct HexMeta meta;
     memset(SerialBuffer, 0, sizeof(SerialBuffer));
@@ -147,7 +151,12 @@ void SerialRecv(void){
     }
     if((status = readByte()) == -1) {returned = failed; return;}
     meta.checksum = (uint8_t)status;
-    if(meta.checksum + sum != 0) {returned = failed; return;}
+    if((uint8_t)(meta.checksum + sum) != 0) {
+        returned = failed;
+        returned.byte_count = sum;
+        returned.checksum = meta.checksum;
+        return;
+    }
     returned = meta;
 }
 

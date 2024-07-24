@@ -79,8 +79,8 @@ int main(void){
 int main(int argc, char** argv){
     if(argc < 2) return 1;
     SerialInit(argv[1]);
-    if(!access("FRAM.bin", F_OK)){
-        FILE* file = fopen("FRAM.bin", "w");
+    FILE* file = NULL;
+    if((file = fopen("FRAM.bin", "r"))){
         fread(FRAM, 0x100, 0x20, file);
         fclose(file);
     }
@@ -89,16 +89,23 @@ int main(int argc, char** argv){
     uECC_set_rng(RNG);
     while(1){
         SerialRecv();
+        if(returned.method == 0){
+            #ifdef EMULATOR
+                fprintf(stderr, "Error Checksum: %x, correct is %x\n", returned.checksum, returned.byte_count);
+            #endif
+            continue;
+        }
+        #ifdef EMULATOR
+            fprintf(stderr, "Byte Count: %d, Method: %x, Slot: %d, Checksum: %x\n", returned.byte_count, returned.method, returned.slot, returned.checksum);
+        #endif
         if(returned.method){
             switch(returned.method){
                 case 0x6666:{
-                    OutputBuffer[0] = 'Q';
-                    OutputBuffer[1] = '-';
-                    OutputBuffer[2] = 'M';
-                    OutputBuffer[3] = 'e';
-                    OutputBuffer[4] = 'e';
-                    OutputBuffer[5] = 't';
-                    SerialSend(6, 0, 0);
+                    OutputBuffer[0] = 0x33;
+                    OutputBuffer[1] = 0xAC;
+                    OutputBuffer[2] = 0xBD;
+                    OutputBuffer[3] = 0x77;
+                    SerialSend(4, 0, 0);
                     break;
                 }
                 case 0x8708:{ // Create a slot
