@@ -1,0 +1,5 @@
+.vscode
+src/uECC.o
+src/qmeet.elf
+src/qmeet.hex
+src/qmeet.map
