@@ -1,7 +1,7 @@
 #define uECC_PLATFORM uECC_avr
 #define uECC_CURVE uECC_secp256k1
-#define uECC_ASM uECC_asm_small
-#define uECC_SQUARE_FUNC 0
+#define uECC_ASM uECC_asm_fast
+#define uECC_SQUARE_FUNC 1
 #define BACK_TO_TABLES
 //#define SERIAL_RX_BUFFER_SIZE 512
 //HardwareSerial.h:113 RX buffer's size = 512
@@ -22,6 +22,7 @@
 #define ENCRYPT_ECDH 6
 #define DECRYPT_ECDH 7
 #define CALC_ECDH_SECRET 8
+#define CHANGE_WRITE_PROTECT 9
 
 #define SUCCESSED 0
 #define PASSWORD_INCORRECT 1
@@ -32,6 +33,8 @@
 #define ERROR_LENGTH 6
 #define VERIFY_FAILED 7
 #define ERROR_PUBLIC_KEY 8
+#define WRITE_PROTECTED 9
+#define HAS_LOGINED 10
 
 struct HexMeta failed = {0, ERROR, 0, 0};
 struct HexMeta returned;
@@ -75,8 +78,16 @@ int main(){
         }
         switch(returned.method){
             case LOGIN: //Login to terminal
+                if(logined == true){
+                    returnStatus(HAS_LOGINED);
+                    break;
+                }
+                if(returned.byte_count != 32){
+                    returnStatus(ERROR_LENGTH);
+                    break;
+                }
                 FRAM::readKeypair(returned.slot, &key);
-                calc_sha_256(hash, SerialBuffer, returned.byte_count);
+                calc_sha_256(hash, SerialBuffer, 32);
                 if(memcmp(hash, key.password_hash, 32)){
                     returnStatus(PASSWORD_INCORRECT);
                     break;
@@ -88,6 +99,18 @@ int main(){
                 returnStatus(SUCCESSED);
                 break;
             case REGISTER:
+                if(logined == true){
+                    returnStatus(HAS_LOGINED);
+                    break;
+                }
+                if(returned.byte_count != 32){
+                    returnStatus(ERROR_LENGTH);
+                    break;
+                }
+                if(FRAM::writeProtected()){
+                    returnStatus(WRITE_PROTECTED);
+                    break;
+                }
                 key.slot = returned.slot;
                 calc_sha_256(key.password_hash, SerialBuffer, returned.byte_count);
                 uECC_make_key(key.publicKey, key.privateKey);
@@ -100,6 +123,14 @@ int main(){
                 returnStatus(SUCCESSED);
                 break;
             case EXIT:
+                if(logined == false){
+                    returnStatus(HAS_NOT_LOGINED);
+                    break;
+                }
+                if(returned.byte_count != 0){
+                    returnStatus(ERROR_LENGTH);
+                    break;
+                }
                 logined = publiced = false;
                 memset(&key, 0, sizeof(key));
                 memset(secret, 0, sizeof(secret));
@@ -155,7 +186,7 @@ int main(){
                     returnStatus(HAS_NOT_LOGINED);
                     break;
                 }
-                if(returned.byte_count != 32){
+                if(returned.byte_count != 64){
                     returnStatus(ERROR_LENGTH);
                     break;
                 }
@@ -165,6 +196,14 @@ int main(){
                 }
                 memcpy(other_publicKey, SerialBuffer, 32);
                 uECC_shared_secret(other_publicKey, key.privateKey, secret);
+                returnStatus(SUCCESSED);
+                break;
+            case CHANGE_WRITE_PROTECT:
+                if(returned.byte_count != 1){
+                    returnStatus(ERROR_LENGTH);
+                    break;
+                }
+                FRAM::changeWriteProtect(SerialBuffer[0]);
                 returnStatus(SUCCESSED);
                 break;
             default:

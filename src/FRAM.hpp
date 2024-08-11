@@ -15,10 +15,15 @@ namespace FRAM{
     bool writeProtected(){
         return !digitalRead(8);
     }
+    void changeWriteProtect(bool status){
+        digitalWrite(8, !status);
+    }
     void init(){
-        SPI.begin();
+        pinMode(8, OUTPUT);
         pinMode(SS, OUTPUT);
-        digitalWrite(SS, LOW); //Open Chip Select
+        digitalWrite(SS, LOW);
+        digitalWrite(8, LOW);
+        SPI.begin();
         SPI.setClockDivider(SPI_CLOCK_DIV2); //8Mhz for FRAM
     }
     inline uint8_t writeAddress(uint32_t address){
@@ -66,5 +71,6 @@ namespace FRAM{
             key->password_hash[i] = read(address);
             address++;
         }
+        return key;
     }
 }

@@ -11,11 +11,11 @@ ARDUINO := arduino/cores/arduino/CDC.cpp arduino/cores/arduino/HardwareSerial.cp
 	arduino/cores/arduino/wiring_analog.c arduino/cores/arduino/wiring_digital.c \
 	arduino/cores/arduino/wiring_pulse.c arduino/cores/arduino/wiring_shift.c
 build:
-	avr-gcc -O1 -fomit-frame-pointer -ffunction-sections -fdata-sections -Imicro-ecc micro-ecc/uECC.c -DF_CPU=16000000UL -mmcu=atmega328p -c -o uECC.o
+	avr-gcc -Ofast -fomit-frame-pointer -ffunction-sections -fdata-sections -Imicro-ecc micro-ecc/uECC.c -DF_CPU=16000000UL -mmcu=atmega328p -c -o uECC.o
 	avr-g++ -Os -ffunction-sections -fdata-sections -Wl,--gc-section,-flto,-Map=qmeet.map -o qmeet.elf -DF_CPU=16000000UL -mmcu=atmega328p \
 		main.cpp aes256/aes256.c uECC.o sha-2/sha-256.c $(ARDUINO) -Imicro-ecc -Iarduino/variants/standard \
 		-Iaes256 -Iarduino/cores/arduino -Iarduino/libraries/SPI/src -Imt19937ar -Isha-2 -std=c++14
 	avr-objcopy -R .eeprom -S -O ihex qmeet.elf qmeet.hex
 	avr-size qmeet.elf
 clean:
-	-rm qmeet.map qmeet.elf qmeet.hex uECC.o
+	-rm qmeet.map qmeet.elf qmeet.hex *.o
