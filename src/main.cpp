@@ -12,6 +12,7 @@
 #include "UART.hpp"
 #include "FRAM.hpp"
 #include "TRNG.hpp"
+#include "tinymt.hpp"
 
 #define ERROR 0
 #define LOGIN 1
@@ -43,22 +44,23 @@ uint8_t hash[32], secret[32], other_publicKey[64];
 keypair key;
 bool logined = false, publiced = false;
 aes256_context context;
+tinymt32_t tinymt32;
 
 inline void returnStatus(uint8_t status){
     memset(SerialBuffer, 0, sizeof(SerialBuffer));
     SerialBuffer[0] = status;
     SerialSend(1, returned.method, returned.slot);
 }
-static int RNG(uint8_t *dest, unsigned size) {
+static int PRNG(uint8_t *dest, unsigned size) {
     uint32_t randomBuffer = 0;
     while(size > 0){
         if(size > 32){
-            randomBuffer = generating_random_seed();
+            randomBuffer = tinymt32_generate_uint32(&tinymt32);
             calc_sha_256(dest, &randomBuffer, sizeof(randomBuffer));
             dest += 32, size -= 32;
         }else{
             for(uint8_t* p = dest; size > 0; size--){
-                *p = (uint8_t)generating_random_seed();
+                *p = (uint8_t)tinymt32_generate_uint32(&tinymt32);
             }
         }
     }
@@ -67,7 +69,11 @@ static int RNG(uint8_t *dest, unsigned size) {
 
 int main(){
 	init(); FRAM::init();
-    uECC_set_rng(RNG);
+    tinymt32.mat1 = generating_random_seed();
+    tinymt32.mat2 = generating_random_seed();
+    tinymt32.tmat = generating_random_seed();
+    tinymt32_init(&tinymt32, generating_random_seed());
+    uECC_set_rng(PRNG);
     SerialInit();
     while(true){
         memset(hash, 0, sizeof(hash));
